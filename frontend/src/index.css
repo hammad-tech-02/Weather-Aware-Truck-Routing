@@ -1,7 +1,83 @@
 @import "tailwindcss";
 
-@theme {
+/* `dark:` follows the data-theme attribute set by src/lib/theme.ts, not the OS setting */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/*
+ * "Deep teal" colour tokens. Components only use the semantic names below
+ * (bg-surface, text-muted, border-line, ...) so both themes stay in sync.
+ * Risk level colours are fixed and live in src/lib/risk-levels.ts.
+ */
+:root,
+[data-theme="light"] {
+  --canvas: #f4f8f9;
+  --surface: #ffffff;
+  --raised: #ffffff;
+  --sunken: #eaf1f3;
+  --line: #d6e4e8;
+  --line-strong: #b5ccd2;
+  --fg: #0b2a33;
+  --muted: #4d6d76;
+  --subtle: #87a2a9;
+  /* spotter teal (#0d8582), nudged darker so white text on it passes 4.5:1 */
+  --accent: #0b7c79;
+  --accent-strong: #08615f;
+  --accent-soft: #e2f2f1;
+  --accent-line: #9fd3d1;
+  --accent-fg: #ffffff;
+  --danger: #b91c1c;
+  --danger-soft: #fef2f2;
+  --danger-line: #fecaca;
+  --overlay: rgb(255 255 255 / 0.94);
+  --shadow: 11 42 51;
+}
+
+[data-theme="dark"] {
+  --canvas: #071a20;
+  --surface: #0b252d;
+  --raised: #103540;
+  --sunken: #082028;
+  --line: #1c4a56;
+  --line-strong: #2a6270;
+  --fg: #e6f1f3;
+  --muted: #8fb1b8;
+  --subtle: #5d858e;
+  /* lighter tint of spotter teal for contrast on the dark panels */
+  --accent: #2bb3ad;
+  --accent-strong: #44c5bf;
+  --accent-soft: rgb(43 179 173 / 0.12);
+  --accent-line: rgb(43 179 173 / 0.4);
+  --accent-fg: #03201f;
+  --danger: #fca5a5;
+  --danger-soft: rgb(248 113 113 / 0.1);
+  --danger-line: rgb(248 113 113 / 0.35);
+  --overlay: rgb(11 37 45 / 0.92);
+  --shadow: 0 0 0;
+}
+
+@theme inline {
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-line: var(--accent-line);
+  --color-accent-fg: var(--accent-fg);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-line: var(--danger-line);
+  --color-overlay: var(--overlay);
+
+  --shadow-panel: 0 1px 2px rgb(var(--shadow) / 0.08), 0 8px 24px -6px rgb(var(--shadow) / 0.22);
 }
 
 html,
@@ -11,27 +87,112 @@ body,
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-canvas text-fg antialiased;
 }
 
-/* popups render outside react; keep them consistent with the rest of the ui */
+::selection {
+  @apply bg-accent/30;
+}
+
+/* thin themed scrollbars for the sidebar and lists */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+/* maplibre ui follows the theme; its css is unlayered so these must be too */
 .maplibregl-popup-content {
-  @apply rounded-lg px-3 py-2.5 shadow-lg ring-1 ring-slate-900/5;
+  @apply rounded-xl bg-surface px-3 py-2.5 text-fg shadow-panel ring-1 ring-line;
 }
 
 .maplibregl-popup-close-button {
-  @apply px-1.5 text-base text-slate-400 hover:bg-transparent hover:text-slate-700;
+  @apply rounded-md px-1.5 text-base text-subtle hover:bg-transparent hover:text-fg;
+}
+
+.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+  border-bottom-color: var(--surface);
+}
+
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+  border-top-color: var(--surface);
+}
+
+.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: var(--surface);
+}
+
+.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: var(--surface);
+}
+
+.maplibregl-ctrl-group:not(:empty) {
+  @apply overflow-hidden rounded-lg bg-surface shadow-panel ring-1 ring-line;
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top-color: var(--line);
+}
+
+.maplibregl-ctrl-group button:not(:disabled):hover {
+  @apply bg-sunken;
+}
+
+[data-theme="dark"] .maplibregl-ctrl-icon {
+  filter: invert(1) hue-rotate(180deg) brightness(0.95);
+}
+
+.maplibregl-ctrl.maplibregl-ctrl-attrib {
+  @apply bg-overlay text-muted;
+}
+
+.maplibregl-ctrl-attrib a {
+  @apply text-muted;
+}
+
+/* attribution stays (licence requirement) but collapses to a small, quiet "i" */
+.maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact {
+  @apply m-0 mr-2 mb-2 min-h-5 rounded-full bg-overlay py-0 pr-5 text-[10px] leading-5 ring-1 ring-line backdrop-blur;
+  opacity: 0.6;
+  transition: opacity 150ms ease;
+}
+
+.maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact:hover,
+.maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact-show {
+  opacity: 1;
+}
+
+.maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact-show {
+  @apply pr-6 pl-2;
+}
+
+.maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button {
+  @apply size-5 rounded-full bg-transparent bg-center bg-no-repeat;
+  background-size: 16px;
+}
+
+[data-theme="dark"] .maplibregl-ctrl-attrib-button {
+  filter: invert(1);
 }
 
 /* range input styled once so the slider looks the same across browsers */
 .range-slider {
-  @apply h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-sky-600;
+  @apply h-1.5 w-full cursor-pointer appearance-none rounded-full bg-sunken accent-accent;
 }
 
 .range-slider::-webkit-slider-thumb {
-  @apply size-4 appearance-none rounded-full border-2 border-white bg-sky-600 shadow ring-1 ring-sky-700/30;
+  @apply size-4 appearance-none rounded-full border-2 border-surface bg-accent shadow ring-1 ring-accent-strong/40;
 }
 
 .range-slider::-moz-range-thumb {
-  @apply size-4 rounded-full border-2 border-white bg-sky-600 shadow;
+  @apply size-4 rounded-full border-2 border-surface bg-accent shadow;
+}
+
+/* maplibre's default bright-blue focus ring clashes with the theme */
+.maplibregl-ctrl-attrib-button:focus,
+.maplibregl-ctrl-group button:focus {
+  box-shadow: 0 0 0 2px var(--accent);
 }

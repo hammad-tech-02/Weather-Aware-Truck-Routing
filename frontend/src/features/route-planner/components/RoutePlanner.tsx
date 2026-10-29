@@ -1,5 +1,7 @@
-import { CloudLightning } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+
+import { SpotterMark } from "@/components/SpotterMark";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 import { usePlanRoute } from "../queries";
 import type { PlanRequest, PlanResponse } from "../types";
@@ -60,15 +62,16 @@ export function RoutePlanner() {
         />
       </main>
 
-      <aside className="flex w-full flex-col border-slate-200 bg-white lg:w-[400px] lg:shrink-0 lg:overflow-y-auto lg:border-r">
-        <header className="flex items-center gap-2.5 border-b border-slate-100 px-5 py-4">
-          <span className="grid size-8 place-items-center rounded-lg bg-slate-900 text-sky-300">
-            <CloudLightning className="size-4.5" />
+      <aside className="flex w-full flex-col border-line bg-surface lg:w-[400px] lg:shrink-0 lg:overflow-y-auto lg:border-r">
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-line bg-surface/90 px-5 py-3.5 backdrop-blur">
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-sunken ring-1 ring-line">
+            <SpotterMark className="w-6" />
           </span>
-          <div>
-            <h1 className="text-sm font-semibold text-slate-900">Weather-Aware Truck Routing</h1>
-            <p className="text-xs text-slate-500">Compare routes by forecast risk along the way</p>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-sm font-semibold tracking-tight text-fg">Weather-Aware Truck Routing</h1>
+            <p className="truncate text-xs text-muted">Spotter take-home &middot; route risk by forecast</p>
           </div>
+          <ThemeToggle />
         </header>
 
         <div className="space-y-5 px-5 py-5">

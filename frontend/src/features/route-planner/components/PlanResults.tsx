@@ -26,7 +26,7 @@ export function PlanResults({
 }: PlanResultsProps) {
   if (routes.length === 0) {
     return (
-      <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+      <p className="rounded-xl border border-line bg-surface p-4 text-sm text-muted dark:bg-raised/40">
         No truck routes were found between these places.
       </p>
     );
@@ -36,7 +36,7 @@ export function PlanResults({
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-muted">
         Departing {formatDateTime(plan.departure_time)} &middot; {formatPounds(plan.load_lbs)} &middot; checkpoints every{" "}
         {plan.checkpoint_interval_mi} mi
       </p>
@@ -66,7 +66,7 @@ export function PlanResultsSkeleton() {
       <Skeleton className="h-3 w-3/4" />
       <Skeleton className="h-16 w-full rounded-xl" />
       {[0, 1, 2].map((i) => (
-        <div key={i} className="space-y-3 rounded-xl border border-slate-200 bg-white p-3.5">
+        <div key={i} className="space-y-3 rounded-xl border border-line bg-surface p-3.5 dark:bg-raised/40">
           <div className="flex justify-between">
             <div className="space-y-1.5">
               <Skeleton className="h-4 w-24" />

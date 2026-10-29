@@ -1,4 +1,3 @@
-import type { ExpressionSpecification, Map as MaplibreMap } from "maplibre-gl";
 import { AlertCircle, Eye, EyeOff, Loader2, Pause, Play } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -11,13 +10,10 @@ import {
   buildHeatmapCollection,
   estimateGridSpacingPx,
   getMetricConfig,
-  heatmapColorExpression,
   heatmapLegendGradient,
-  heatmapRadiusExpression,
-  heatmapWeightExpression,
   type HeatmapMetric,
 } from "../heatmap";
-import { LAYERS, SOURCES, setSourceData } from "../map-layers";
+import type { PlannerMap } from "../map-controller";
 import { useHeatmap } from "../queries";
 import type { PlanResponse } from "../types";
 
@@ -26,22 +22,18 @@ const DEFAULT_HOURS = 49;
 
 const METRIC_OPTIONS = HEATMAP_METRICS.map((metric) => ({ value: metric.id, label: metric.label }));
 
-/** Checkpoints within ~1 h of the slider time stay solid; the rest fade out with distance in time. */
-function checkpointOpacity(hour: number): ExpressionSpecification {
-  return ["interpolate", ["linear"], ["abs", ["-", ["get", "h"], hour]], 1, 1, 4, 0.3];
-}
-
 interface HeatmapPanelProps {
-  map: MaplibreMap;
+  controller: PlannerMap;
   plan: PlanResponse;
 }
 
 /**
  * Forecast slider and heatmap controls. Hour, metric and visibility live
- * here, not in the planner, so scrubbing re-renders only this panel and
- * updates the map through `setPaintProperty` without touching the data.
+ * here, not in the planner, so scrubbing re-renders only this panel; the
+ * controller turns each change into a paint-property update (no data upload)
+ * and remembers it for basemap switches.
  */
-export function HeatmapPanel({ map, plan }: HeatmapPanelProps) {
+export function HeatmapPanel({ controller, plan }: HeatmapPanelProps) {
   const { data, isFetching, isError, refetch } = useHeatmap(plan);
   const [hour, setHour] = useState(0);
   const [metric, setMetric] = useState<HeatmapMetric>("risk");
@@ -58,25 +50,13 @@ export function HeatmapPanel({ map, plan }: HeatmapPanelProps) {
 
   // the only data upload: once per heatmap response
   useEffect(() => {
-    setSourceData(map, SOURCES.heatmap, collection ?? { type: "FeatureCollection", features: [] });
-    if (spacingPx !== undefined) map.setPaintProperty(LAYERS.heatmap, "heatmap-radius", heatmapRadiusExpression(spacingPx));
-  }, [map, collection, spacingPx]);
+    controller.setHeatmapData(collection, spacingPx);
+  }, [controller, collection, spacingPx]);
 
+  // per-frame path while scrubbing or playing
   useEffect(() => {
-    map.setPaintProperty(LAYERS.heatmap, "heatmap-color", heatmapColorExpression(metric));
-  }, [map, metric]);
-
-  // per-frame path while scrubbing or playing: swap the property name only
-  useEffect(() => {
-    map.setPaintProperty(LAYERS.heatmap, "heatmap-weight", heatmapWeightExpression(metric, shownHour));
-  }, [map, metric, shownHour]);
-
-  useEffect(() => {
-    map.setLayoutProperty(LAYERS.heatmap, "visibility", visible ? "visible" : "none");
-    const opacity = visible ? checkpointOpacity(shownHour) : 1;
-    map.setPaintProperty(LAYERS.checkpoints, "circle-opacity", opacity);
-    map.setPaintProperty(LAYERS.checkpoints, "circle-stroke-opacity", opacity);
-  }, [map, visible, shownHour]);
+    controller.setHeatmapView({ metric, hour: shownHour, visible });
+  }, [controller, metric, shownHour, visible]);
 
   const config = getMetricConfig(metric);
   const ready = data !== undefined;
@@ -91,24 +71,28 @@ export function HeatmapPanel({ map, plan }: HeatmapPanelProps) {
     return () => window.clearInterval(timer);
   }, [isPlaying, maxHour]);
 
+  const timeLabel = formatDateTime(startMs + shownHour * HOUR_MS);
+
   return (
-    <div className="absolute inset-x-2 bottom-2 z-10 sm:inset-x-auto sm:bottom-4 sm:left-1/2 sm:w-[min(36rem,calc(100%-2rem))] sm:-translate-x-1/2">
-      <div className="rounded-xl bg-white/95 p-3 shadow-lg ring-1 ring-slate-900/10 backdrop-blur">
-        <div className="flex items-center gap-2">
+    // side margins keep the bottom-right attribution button uncovered at every width
+    <div className="absolute bottom-2 left-2 right-10 z-10 sm:right-auto sm:bottom-4 sm:left-1/2 sm:w-[min(36rem,calc(100%-6rem))] sm:-translate-x-1/2">
+      <div className="rounded-2xl bg-overlay p-3 shadow-panel ring-1 ring-line backdrop-blur-md">
+        <div className="flex items-center gap-2.5">
           <button
             type="button"
             onClick={() => setPlaying(!isPlaying)}
             disabled={!ready || !visible}
             aria-label={isPlaying ? "Pause forecast animation" : "Play forecast animation"}
-            className="grid size-8 shrink-0 place-items-center rounded-full bg-slate-900 text-white transition-colors hover:bg-slate-700 disabled:opacity-40"
+            className="grid size-9 shrink-0 place-items-center rounded-full bg-accent text-accent-fg shadow-sm transition-colors hover:bg-accent-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-40"
           >
             {isPlaying ? <Pause className="size-3.5 fill-current" /> : <Play className="ml-0.5 size-3.5 fill-current" />}
           </button>
 
           <div className="min-w-0 flex-1">
-            <div className="mb-1 flex items-baseline justify-between gap-2 text-xs">
-              <span className="font-semibold text-slate-900 tabular-nums">
-                +{shownHour}h <span className="font-normal text-slate-600">&middot; {formatDateTime(startMs + shownHour * HOUR_MS)}</span>
+            <div className="mb-1.5 flex items-baseline justify-between gap-2 text-xs">
+              <span className="truncate font-semibold text-fg tabular-nums">
+                <span className="text-accent">+{shownHour}h</span>
+                <span className="font-normal text-muted"> &middot; {timeLabel}</span>
               </span>
               <StatusChip loading={isFetching && !ready} error={isError && !ready} onRetry={() => void refetch()} />
             </div>
@@ -124,32 +108,32 @@ export function HeatmapPanel({ map, plan }: HeatmapPanelProps) {
                 setPlaying(false);
               }}
               aria-label="Forecast hour"
-              aria-valuetext={`+${shownHour} hours, ${formatDateTime(startMs + shownHour * HOUR_MS)}`}
+              aria-valuetext={`+${shownHour} hours, ${timeLabel}`}
               className="range-slider disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
 
           <button
             type="button"
-            onClick={() => {
-              setVisible((v) => !v);
-            }}
+            onClick={() => setVisible((v) => !v)}
             aria-pressed={visible}
             title={visible ? "Hide weather heatmap" : "Show weather heatmap"}
             aria-label={visible ? "Hide weather heatmap" : "Show weather heatmap"}
-            className="grid size-8 shrink-0 place-items-center rounded-lg text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50 hover:text-slate-900"
+            className={`grid size-9 shrink-0 place-items-center rounded-lg ring-1 transition-colors focus-visible:outline-2 focus-visible:outline-accent ${
+              visible ? "text-accent ring-accent-line hover:bg-accent-soft" : "text-muted ring-line hover:bg-sunken hover:text-fg"
+            }`}
           >
             {visible ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
           </button>
         </div>
 
-        <div className={`mt-2.5 flex items-center gap-3 ${visible ? "" : "opacity-50"}`}>
+        <div className={`mt-3 flex items-center gap-3 transition-opacity ${visible ? "" : "opacity-50"}`}>
           <div className="w-56 shrink-0">
             <SegmentedControl ariaLabel="Heatmap metric" size="sm" value={metric} options={METRIC_OPTIONS} onChange={setMetric} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="h-2 rounded-full ring-1 ring-slate-900/5" style={{ background: heatmapLegendGradient(metric) }} />
-            <div className="mt-0.5 flex justify-between text-[10px] text-slate-500">
+            <div className="h-2 rounded-full ring-1 ring-line" style={{ background: heatmapLegendGradient(metric) }} />
+            <div className="mt-1 flex justify-between text-[10px] text-muted">
               <span>{config.legend[0]}</span>
               <span>{config.legend[1]}</span>
             </div>
@@ -163,8 +147,8 @@ export function HeatmapPanel({ map, plan }: HeatmapPanelProps) {
 function StatusChip({ loading, error, onRetry }: { loading: boolean; error: boolean; onRetry: () => void }) {
   if (loading) {
     return (
-      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
-        <Loader2 className="size-3 animate-spin" />
+      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-sunken px-2 py-0.5 text-[10px] text-muted ring-1 ring-line">
+        <Loader2 className="size-3 animate-spin text-accent" />
         Loading forecast grid...
       </span>
     );
@@ -174,7 +158,7 @@ function StatusChip({ loading, error, onRetry }: { loading: boolean; error: bool
       <button
         type="button"
         onClick={onRetry}
-        className="inline-flex shrink-0 items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] text-red-700 hover:bg-red-100"
+        className="inline-flex shrink-0 items-center gap-1 rounded-full bg-danger-soft px-2 py-0.5 text-[10px] text-danger ring-1 ring-danger-line hover:opacity-80"
       >
         <AlertCircle className="size-3" />
         Forecast grid failed. Retry

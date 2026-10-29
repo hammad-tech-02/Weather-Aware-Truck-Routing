@@ -1,19 +1,21 @@
 /**
- * Sources and layers for the route map. They are created once when the style
- * loads and afterwards only mutated (`setData`, `setFilter`,
- * `setPaintProperty`), which is much cheaper than re-adding them.
+ * Overlay sources and layers. `setStyle` throws away everything that is not
+ * part of the basemap, so `addOverlays` must be able to rebuild the full stack
+ * from scratch on every `style.load`; data and view state are then re-applied
+ * by the map controller.
  */
 import type { FeatureCollection } from "geojson";
 import type { ExpressionSpecification, FilterSpecification, GeoJSONSource, Map as MaplibreMap } from "maplibre-gl";
 
 import { RISK_COLOR_EXPRESSION } from "@/lib/risk-levels";
 
+import { OVERLAY_PALETTES, type Appearance } from "./basemaps";
 import { HEATMAP_INTENSITY, heatmapColorExpression } from "./heatmap";
 
-export const BASEMAP_STYLE_URL = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
-
-/** A font stack the CARTO glyph server actually serves (taken from the positron style). */
+/** A font stack the CARTO glyph server serves (taken from its GL styles). */
 const LABEL_FONT = ["Montserrat SemiBold", "Open Sans Bold", "Noto Sans Regular", "Noto Sans CJK JP Regular"];
+
+const TERRARIUM_TILES = ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"];
 
 export const SOURCES = {
   heatmap: "heatmap",
@@ -21,9 +23,13 @@ export const SOURCES = {
   routeRisk: "route-risk",
   checkpoints: "checkpoints",
   stops: "stops",
+  // terrain and hillshade read separate copies; maplibre degrades quality when one source serves both
+  terrainDem: "terrain-dem",
+  hillshadeDem: "hillshade-dem",
 } as const;
 
 export const LAYERS = {
+  hillshade: "hillshade",
   heatmap: "heatmap",
   routesAlt: "routes-alt",
   routeSelectedCasing: "route-selected-casing",
@@ -36,7 +42,9 @@ export const LAYERS = {
   checkpoints: "checkpoints",
 } as const;
 
-const EMPTY: FeatureCollection = { type: "FeatureCollection", features: [] };
+export const TERRAIN_EXAGGERATION = 1.3;
+
+export const EMPTY_COLLECTION: FeatureCollection = { type: "FeatureCollection", features: [] };
 
 export function setSourceData(map: MaplibreMap, id: string, data: FeatureCollection): void {
   (map.getSource(id) as GeoJSONSource | undefined)?.setData(data);
@@ -64,89 +72,135 @@ const zoomScaled = (low: number, high: number): ExpressionSpecification => [
   high,
 ];
 
-export function addPlannerLayers(map: MaplibreMap): void {
-  for (const id of Object.values(SOURCES)) {
-    map.addSource(id, { type: "geojson", data: EMPTY });
+/**
+ * Basemap layer to insert line overlays under: the first label after the last
+ * fill/line layer, so routes draw above roads but city names stay readable.
+ * Styles without symbol layers (satellite) get undefined, i.e. the top.
+ */
+function findLabelAnchor(map: MaplibreMap): string | undefined {
+  const layers = map.getStyle().layers;
+  let lastNonSymbol = -1;
+  layers.forEach((layer, index) => {
+    if (layer.type !== "symbol") lastNonSymbol = index;
+  });
+  return layers[lastNonSymbol + 1]?.id;
+}
+
+export function addOverlays(map: MaplibreMap, appearance: Appearance): void {
+  const palette = OVERLAY_PALETTES[appearance];
+  const anchor = findLabelAnchor(map);
+
+  for (const id of [SOURCES.heatmap, SOURCES.routes, SOURCES.routeRisk, SOURCES.checkpoints, SOURCES.stops]) {
+    map.addSource(id, { type: "geojson", data: EMPTY_COLLECTION });
+  }
+  // dem tiles are only requested once terrain or the hillshade layer is switched on
+  for (const id of [SOURCES.terrainDem, SOURCES.hillshadeDem]) {
+    map.addSource(id, { type: "raster-dem", tiles: TERRARIUM_TILES, encoding: "terrarium", tileSize: 256, maxzoom: 15 });
   }
 
-  // heatmap sits above roads but below place labels so city names stay readable
-  const layers = map.getStyle().layers;
-  const labelLayer =
-    layers.find((layer) => layer.type === "symbol" && layer.id.startsWith("watername")) ??
-    layers.find((layer) => layer.type === "symbol");
+  // below the label anchor, bottom to top: hillshade, heatmap, route lines
+  map.addLayer(
+    {
+      id: LAYERS.hillshade,
+      type: "hillshade",
+      source: SOURCES.hillshadeDem,
+      layout: { visibility: "none" },
+      paint: {
+        "hillshade-shadow-color": palette.hillshade.shadow,
+        "hillshade-highlight-color": palette.hillshade.highlight,
+        "hillshade-accent-color": palette.hillshade.accent,
+        "hillshade-exaggeration": palette.hillshade.exaggeration,
+      },
+    },
+    anchor,
+  );
 
   map.addLayer(
     {
       id: LAYERS.heatmap,
       type: "heatmap",
       source: SOURCES.heatmap,
-      layout: { visibility: "visible" },
       paint: {
         "heatmap-weight": 0,
         "heatmap-intensity": HEATMAP_INTENSITY,
         "heatmap-color": heatmapColorExpression("risk"),
-        "heatmap-opacity": 0.75,
+        "heatmap-opacity": palette.heatmapOpacity,
       },
     },
-    labelLayer?.id,
+    anchor,
   );
 
-  map.addLayer({
-    id: LAYERS.routesAlt,
-    type: "line",
-    source: SOURCES.routes,
-    filter: alternativeRoutesFilter(undefined),
-    layout: { "line-join": "round", "line-cap": "round" },
-    paint: {
-      "line-color": "#475569",
-      "line-width": zoomScaled(3, 6),
-      "line-opacity": 0.5,
+  map.addLayer(
+    {
+      id: LAYERS.routesAlt,
+      type: "line",
+      source: SOURCES.routes,
+      filter: alternativeRoutesFilter(undefined),
+      layout: { "line-join": "round", "line-cap": "round" },
+      paint: {
+        "line-color": palette.routeAlt,
+        "line-width": zoomScaled(3, 6),
+        "line-opacity": palette.routeAltOpacity,
+      },
     },
-  });
+    anchor,
+  );
 
-  map.addLayer({
-    id: LAYERS.routeSelectedCasing,
-    type: "line",
-    source: SOURCES.routes,
-    filter: selectedRouteFilter(undefined),
-    layout: { "line-join": "round", "line-cap": "round" },
-    paint: { "line-color": "#ffffff", "line-width": zoomScaled(8, 14) },
-  });
+  map.addLayer(
+    {
+      id: LAYERS.routeSelectedCasing,
+      type: "line",
+      source: SOURCES.routes,
+      filter: selectedRouteFilter(undefined),
+      layout: { "line-join": "round", "line-cap": "round" },
+      paint: { "line-color": palette.routeCasing, "line-width": zoomScaled(8, 14) },
+    },
+    anchor,
+  );
 
   // drawn under the risk segments so any gap still shows the route
-  map.addLayer({
-    id: LAYERS.routeSelectedBase,
-    type: "line",
-    source: SOURCES.routes,
-    filter: selectedRouteFilter(undefined),
-    layout: { "line-join": "round", "line-cap": "round" },
-    paint: { "line-color": "#0f172a", "line-width": zoomScaled(5, 9) },
-  });
+  map.addLayer(
+    {
+      id: LAYERS.routeSelectedBase,
+      type: "line",
+      source: SOURCES.routes,
+      filter: selectedRouteFilter(undefined),
+      layout: { "line-join": "round", "line-cap": "round" },
+      paint: { "line-color": palette.routeBase, "line-width": zoomScaled(5, 9) },
+    },
+    anchor,
+  );
 
-  map.addLayer({
-    id: LAYERS.routeRisk,
-    type: "line",
-    source: SOURCES.routeRisk,
-    layout: { "line-join": "round", "line-cap": "round" },
-    paint: { "line-color": RISK_COLOR_EXPRESSION, "line-width": zoomScaled(4, 7) },
-  });
+  map.addLayer(
+    {
+      id: LAYERS.routeRisk,
+      type: "line",
+      source: SOURCES.routeRisk,
+      layout: { "line-join": "round", "line-cap": "round" },
+      paint: { "line-color": RISK_COLOR_EXPRESSION, "line-width": zoomScaled(4, 7) },
+    },
+    anchor,
+  );
 
+  // above the basemap labels: route names, stops and checkpoints must never be hidden
   map.addLayer({
     id: LAYERS.routeLabels,
     type: "symbol",
     source: SOURCES.routes,
     layout: {
       "symbol-placement": "line",
-      "symbol-spacing": 400,
+      "symbol-spacing": 300,
       "text-field": ["get", "label"],
       "text-font": LABEL_FONT,
       "text-size": 12,
       "text-offset": [0, -1.1],
-      "text-max-angle": 30,
+      // real road geometry bends a lot; a strict angle limit leaves no room to place a label
+      "text-max-angle": 75,
+      "text-keep-upright": true,
     },
     paint: {
-      "text-color": ["case", ["get", "recommended"], "#075985", "#334155"],
-      "text-halo-color": "#ffffff",
+      "text-color": ["case", ["get", "recommended"], palette.labelRecommended, palette.labelText],
+      "text-halo-color": palette.labelHalo,
       "text-halo-width": 2,
     },
   });
@@ -157,8 +211,8 @@ export function addPlannerLayers(map: MaplibreMap): void {
     source: SOURCES.stops,
     paint: {
       "circle-radius": zoomScaled(6, 9),
-      "circle-color": ["match", ["get", "type"], "rest", "#1e293b", "#475569"],
-      "circle-stroke-color": "#ffffff",
+      "circle-color": palette.stopFill,
+      "circle-stroke-color": palette.pointStroke,
       "circle-stroke-width": 1.5,
     },
   });
@@ -174,7 +228,7 @@ export function addPlannerLayers(map: MaplibreMap): void {
       "text-allow-overlap": true,
       "text-ignore-placement": true,
     },
-    paint: { "text-color": "#ffffff" },
+    paint: { "text-color": palette.stopText },
   });
 
   map.addLayer({
@@ -184,8 +238,8 @@ export function addPlannerLayers(map: MaplibreMap): void {
     filter: activeCheckpointFilter(undefined),
     paint: {
       "circle-radius": zoomScaled(9, 14),
-      "circle-color": "rgba(14, 165, 233, 0.15)",
-      "circle-stroke-color": "#0284c7",
+      "circle-color": palette.activeFill,
+      "circle-stroke-color": palette.activeRing,
       "circle-stroke-width": 2,
     },
   });
@@ -197,7 +251,7 @@ export function addPlannerLayers(map: MaplibreMap): void {
     paint: {
       "circle-radius": zoomScaled(3.5, 7),
       "circle-color": RISK_COLOR_EXPRESSION,
-      "circle-stroke-color": "#ffffff",
+      "circle-stroke-color": palette.pointStroke,
       "circle-stroke-width": 1.5,
     },
   });

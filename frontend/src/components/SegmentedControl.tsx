@@ -30,7 +30,7 @@ export function SegmentedControl<T extends string | number>({
       role="radiogroup"
       aria-label={ariaLabel}
       onKeyDown={handleKeyDown}
-      className="inline-flex w-full rounded-lg bg-slate-100 p-0.5 ring-1 ring-slate-200"
+      className="inline-flex w-full rounded-lg bg-sunken p-0.5 ring-1 ring-line"
     >
       {options.map((option) => {
         const selected = option.value === value;
@@ -42,9 +42,13 @@ export function SegmentedControl<T extends string | number>({
             aria-checked={selected}
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(option.value)}
-            className={`flex-1 rounded-md font-medium transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 ${
+            className={`flex-1 rounded-md font-medium transition-colors focus-visible:outline-2 focus-visible:outline-accent ${
               size === "sm" ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm"
-            } ${selected ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+            } ${
+              selected
+                ? "bg-raised text-fg shadow-sm ring-1 ring-line dark:text-accent dark:ring-accent-line"
+                : "text-muted hover:text-fg"
+            }`}
           >
             {option.label}
           </button>

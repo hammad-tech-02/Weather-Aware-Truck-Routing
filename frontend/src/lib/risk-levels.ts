@@ -11,14 +11,19 @@ export interface RiskLevelInfo {
   key: keyof MilesByLevel;
   label: string;
   color: string;
+  /** badge text colour with at least 4.5:1 contrast against `color` */
+  textColor: string;
 }
 
+// white on yellow/orange/green fails contrast, so the bright levels use near-black text
+const RISK_TEXT_DARK = "#020c0f";
+
 export const RISK_LEVELS: readonly RiskLevelInfo[] = [
-  { level: 0, key: "low", label: "Low", color: "#22c55e" },
-  { level: 1, key: "moderate", label: "Moderate", color: "#eab308" },
-  { level: 2, key: "high", label: "High", color: "#f97316" },
-  { level: 3, key: "severe", label: "Severe", color: "#ef4444" },
-  { level: 4, key: "no_travel", label: "No Travel", color: "#7e22ce" },
+  { level: 0, key: "low", label: "Low", color: "#22c55e", textColor: RISK_TEXT_DARK },
+  { level: 1, key: "moderate", label: "Moderate", color: "#eab308", textColor: RISK_TEXT_DARK },
+  { level: 2, key: "high", label: "High", color: "#f97316", textColor: RISK_TEXT_DARK },
+  { level: 3, key: "severe", label: "Severe", color: "#ef4444", textColor: RISK_TEXT_DARK },
+  { level: 4, key: "no_travel", label: "No Travel", color: "#7e22ce", textColor: "#ffffff" },
 ];
 
 export const UNKNOWN_RISK_COLOR = "#9ca3af";
@@ -30,6 +35,10 @@ export function getRiskInfo(level: RiskLevel | null | undefined): RiskLevelInfo 
 
 export function riskColor(level: RiskLevel | null | undefined): string {
   return getRiskInfo(level)?.color ?? UNKNOWN_RISK_COLOR;
+}
+
+export function riskTextColor(level: RiskLevel | null | undefined): string {
+  return getRiskInfo(level)?.textColor ?? RISK_TEXT_DARK;
 }
 
 export function riskLabel(level: RiskLevel | null | undefined): string {

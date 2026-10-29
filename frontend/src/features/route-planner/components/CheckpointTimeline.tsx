@@ -42,13 +42,13 @@ export const CheckpointTimeline = memo(function CheckpointTimeline({
   return (
     <section aria-label={`Checkpoints for ${route.name}`}>
       <div className="mb-2 flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold text-slate-900">
-          {route.name} checkpoints <span className="font-normal text-slate-400">({route.checkpoints.length})</span>
+        <h2 className="text-sm font-semibold text-fg">
+          {route.name} checkpoints <span className="font-normal text-subtle">({route.checkpoints.length})</span>
         </h2>
-        <span className="text-xs text-slate-400">times in {localTimeZoneName()}</span>
+        <span className="text-xs text-subtle">times in {localTimeZoneName()}</span>
       </div>
 
-      <ol ref={listRef} className="relative space-y-1 before:absolute before:top-2 before:bottom-2 before:left-[0.6875rem] before:w-px before:bg-slate-200">
+      <ol ref={listRef} className="relative space-y-1 before:absolute before:top-2 before:bottom-2 before:left-[0.6875rem] before:w-px before:bg-line">
         {items.map((item) =>
           item.kind === "stop" ? (
             <StopRow key={`stop-${item.stop.start}`} stop={item.stop} />
@@ -80,24 +80,24 @@ const CheckpointRow = memo(function CheckpointRow({ checkpoint, active, onSelect
         type="button"
         onClick={() => onSelect(checkpoint.index)}
         aria-current={active ? "true" : undefined}
-        className={`flex w-full gap-2.5 rounded-lg py-1.5 pr-2 pl-0.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-sky-500 ${
-          active ? "bg-sky-50 ring-1 ring-sky-200" : "hover:bg-slate-100"
+        className={`flex w-full gap-2.5 rounded-lg py-1.5 pr-2 pl-0.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-accent ${
+          active ? "bg-accent-soft ring-1 ring-accent-line" : "hover:bg-sunken"
         }`}
       >
         <span
-          className="relative z-10 mt-1 size-4 shrink-0 rounded-full border-2 border-white shadow-sm ring-1 ring-slate-300"
+          className="relative z-10 mt-1 size-4 shrink-0 rounded-full border-2 border-surface shadow-sm ring-1 ring-line-strong"
           style={{ backgroundColor: riskColor(checkpoint.level) }}
         />
         <span className="min-w-0 flex-1">
           <span className="flex items-center justify-between gap-2">
-            <span className="text-xs font-medium text-slate-900 tabular-nums">
+            <span className="text-xs font-medium text-fg tabular-nums">
               Mile {formatNumber(checkpoint.mile)}
-              <span className="font-normal text-slate-500"> &middot; {formatDayTime(checkpoint.eta)}</span>
+              <span className="font-normal text-muted"> &middot; {formatDayTime(checkpoint.eta)}</span>
             </span>
             <RiskBadge level={checkpoint.level} size="sm" />
           </span>
           {weather ? (
-            <span className="mt-0.5 flex flex-wrap gap-x-3 text-[11px] text-slate-500 tabular-nums">
+            <span className="mt-0.5 flex flex-wrap gap-x-3 text-[11px] text-muted tabular-nums">
               <span className="inline-flex items-center gap-0.5" title="Wind / gusts">
                 <Wind className="size-3" />
                 {formatNumber(weather.wind_mph, 0)}/{formatNumber(weather.gust_mph, 0)} mph
@@ -112,10 +112,10 @@ const CheckpointRow = memo(function CheckpointRow({ checkpoint, active, onSelect
               </span>
             </span>
           ) : (
-            <span className="mt-0.5 block text-[11px] text-slate-400">Forecast unavailable</span>
+            <span className="mt-0.5 block text-[11px] text-subtle">Forecast unavailable</span>
           )}
           {checkpoint.reasons.length > 0 && (
-            <span className="mt-0.5 block text-[11px] leading-snug text-slate-600">{checkpoint.reasons.join("; ")}</span>
+            <span className="mt-0.5 block text-[11px] leading-snug text-muted">{checkpoint.reasons.join("; ")}</span>
           )}
         </span>
       </button>
@@ -128,12 +128,12 @@ function StopRow({ stop }: { stop: HosStop }) {
   const Icon = isRest ? Bed : Coffee;
   const hours = (Date.parse(stop.end) - Date.parse(stop.start)) / 3_600_000;
   return (
-    <li className="flex gap-2.5 py-1 pl-0.5 text-[11px] text-slate-600">
-      <span className="relative z-10 grid size-4 shrink-0 place-items-center rounded-full bg-slate-700 text-white">
+    <li className="flex gap-2.5 py-1 pl-0.5 text-[11px] text-muted">
+      <span className="relative z-10 grid size-4 shrink-0 place-items-center rounded-full bg-fg text-canvas">
         <Icon className="size-2.5" />
       </span>
       <span>
-        <span className="font-medium text-slate-800">{isRest ? "Rest" : "Break"}</span> {formatHours(hours)} at mile{" "}
+        <span className="font-medium text-fg">{isRest ? "Rest" : "Break"}</span> {formatHours(hours)} at mile{" "}
         {formatNumber(stop.mile)} &middot; {formatDateTime(stop.start)}
       </span>
     </li>

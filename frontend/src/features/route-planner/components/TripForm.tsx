@@ -2,6 +2,7 @@ import { ArrowUpDown, Loader2, Route } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { SegmentedControl } from "@/components/SegmentedControl";
+import { fieldLabelClassName, inputClassName } from "@/lib/field-styles";
 import { nextFullHour, parseDateTimeLocal, toDateTimeLocalValue, toIsoWithOffset } from "@/lib/datetime";
 import { localTimeZoneName } from "@/lib/format";
 
@@ -91,7 +92,7 @@ export function TripForm({ isPending, onSubmit }: TripFormProps) {
           value={origin}
           onChange={setOrigin}
           error={errors.origin}
-          accent="#0f172a"
+          variant="origin"
         />
         <PlaceAutocomplete
           label="Destination"
@@ -99,7 +100,7 @@ export function TripForm({ isPending, onSubmit }: TripFormProps) {
           value={destination}
           onChange={setDestination}
           error={errors.destination}
-          accent="#0284c7"
+          variant="destination"
         />
         <button
           type="button"
@@ -107,7 +108,7 @@ export function TripForm({ isPending, onSubmit }: TripFormProps) {
           disabled={!origin && !destination}
           title="Swap origin and destination"
           aria-label="Swap origin and destination"
-          className="absolute -top-0.5 right-0 flex items-center gap-1 rounded px-1 py-0.5 text-xs text-slate-500 hover:text-slate-900 disabled:opacity-40"
+          className="absolute -top-0.5 right-0 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-muted transition-colors hover:bg-sunken hover:text-accent disabled:opacity-40 disabled:hover:bg-transparent"
         >
           <ArrowUpDown className="size-3" />
           Swap
@@ -116,8 +117,8 @@ export function TripForm({ isPending, onSubmit }: TripFormProps) {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
         <div>
-          <label htmlFor="departure" className="mb-1 block text-xs font-medium text-slate-600">
-            Departure <span className="font-normal text-slate-400">({timeZone})</span>
+          <label htmlFor="departure" className={fieldLabelClassName}>
+            Departure <span className="font-normal text-subtle">({timeZone})</span>
           </label>
           <input
             id="departure"
@@ -125,17 +126,13 @@ export function TripForm({ isPending, onSubmit }: TripFormProps) {
             value={departure}
             onChange={(event) => setDeparture(event.target.value)}
             aria-invalid={errors.departure ? true : undefined}
-            className={`w-full rounded-lg border bg-white px-2.5 py-2 text-sm shadow-xs outline-none focus:ring-2 ${
-              errors.departure
-                ? "border-red-400 focus:ring-red-500/20"
-                : "border-slate-300 focus:border-sky-500 focus:ring-sky-500/20"
-            }`}
+            className={`px-2.5 py-2 ${inputClassName(Boolean(errors.departure))}`}
           />
-          {errors.departure && <p className="mt-1 text-xs text-red-600">{errors.departure}</p>}
+          {errors.departure && <p className="mt-1 text-xs text-danger">{errors.departure}</p>}
         </div>
 
         <div>
-          <label htmlFor="load" className="mb-1 block text-xs font-medium text-slate-600">
+          <label htmlFor="load" className={fieldLabelClassName}>
             Load weight
           </label>
           <div className="relative">
@@ -149,17 +146,13 @@ export function TripForm({ isPending, onSubmit }: TripFormProps) {
               value={load}
               onChange={(event) => setLoad(event.target.value)}
               aria-invalid={errors.load ? true : undefined}
-              className={`w-full rounded-lg border bg-white py-2 pr-10 pl-2.5 text-sm tabular-nums shadow-xs outline-none focus:ring-2 ${
-                errors.load
-                  ? "border-red-400 focus:ring-red-500/20"
-                  : "border-slate-300 focus:border-sky-500 focus:ring-sky-500/20"
-              }`}
+              className={`py-2 pr-10 pl-2.5 tabular-nums ${inputClassName(Boolean(errors.load))}`}
             />
-            <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-slate-400">
+            <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-subtle">
               lbs
             </span>
           </div>
-          {errors.load && <p className="mt-1 text-xs text-red-600">{errors.load}</p>}
+          {errors.load && <p className="mt-1 text-xs text-danger">{errors.load}</p>}
         </div>
       </div>
 
@@ -171,8 +164,8 @@ export function TripForm({ isPending, onSubmit }: TripFormProps) {
             onClick={() => setLoad(String(preset))}
             className={`rounded-full border px-2.5 py-0.5 text-xs tabular-nums transition-colors ${
               Number(load) === preset
-                ? "border-sky-500 bg-sky-50 text-sky-800"
-                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                ? "border-accent-line bg-accent-soft text-accent"
+                : "border-line text-muted hover:border-line-strong hover:text-fg"
             }`}
           >
             {preset / 1000}k lbs
@@ -181,7 +174,7 @@ export function TripForm({ isPending, onSubmit }: TripFormProps) {
       </div>
 
       <div>
-        <span className="mb-1 block text-xs font-medium text-slate-600">Checkpoint every</span>
+        <span className={fieldLabelClassName}>Checkpoint every</span>
         <SegmentedControl
           ariaLabel="Checkpoint interval"
           value={checkpointInterval}
@@ -193,7 +186,7 @@ export function TripForm({ isPending, onSubmit }: TripFormProps) {
       <button
         type="submit"
         disabled={isPending}
-        className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 disabled:cursor-wait disabled:opacity-70"
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg shadow-sm transition-colors hover:bg-accent-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-wait disabled:opacity-70"
       >
         {isPending ? <Loader2 className="size-4 animate-spin" /> : <Route className="size-4" />}
         {isPending ? "Planning routes..." : "Plan routes"}

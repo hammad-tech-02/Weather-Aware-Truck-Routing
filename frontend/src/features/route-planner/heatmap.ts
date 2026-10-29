@@ -34,6 +34,10 @@ export interface HeatmapMetricConfig {
 
 const riskRampStop = (level: number) => 0.1 + (0.9 * level) / 4;
 
+/*
+ * Ramps start transparent and run through colours that stay readable on the
+ * dark, light and satellite basemaps (no near-white or near-black stops).
+ */
 export const HEATMAP_METRICS: readonly HeatmapMetricConfig[] = [
   {
     id: "risk",
@@ -41,11 +45,11 @@ export const HEATMAP_METRICS: readonly HeatmapMetricConfig[] = [
     prefix: "r",
     max: 4,
     floor: 0.1,
-    // aligned with the weight mapping so density at level N lands on that level's color
-    // low risk is a light wash so the hazardous stretches stand out
+    // low risk is a light teal wash so the hazardous stretches stand out; higher
+    // stops are aligned with the weight mapping so level N lands on its own colour
     ramp: [
-      [0.04, "rgba(34, 197, 94, 0.15)"],
-      [riskRampStop(0), "rgba(34, 197, 94, 0.4)"],
+      [0.04, "rgba(43, 179, 173, 0.14)"],
+      [riskRampStop(0), "rgba(43, 179, 173, 0.45)"],
       ...RISK_LEVELS.slice(1).map((info) => [riskRampStop(info.level), info.color] as [number, string]),
     ],
     legend: ["Low", "No Travel"],
@@ -57,11 +61,11 @@ export const HEATMAP_METRICS: readonly HeatmapMetricConfig[] = [
     max: 55,
     floor: 0.05,
     ramp: [
-      [0.04, "rgba(186, 230, 253, 0.35)"],
-      [0.3, "#7dd3fc"],
-      [0.55, "#3b82f6"],
-      [0.8, "#7c3aed"],
-      [1, "#c026d3"],
+      [0.04, "rgba(94, 234, 212, 0.15)"],
+      [0.3, "#5eead4"],
+      [0.55, "#38bdf8"],
+      [0.8, "#818cf8"],
+      [1, "#e879f9"],
     ],
     legend: ["0 mph", "55+ mph"],
   },
@@ -72,11 +76,11 @@ export const HEATMAP_METRICS: readonly HeatmapMetricConfig[] = [
     max: 1,
     floor: 0.04,
     ramp: [
-      [0.03, "rgba(165, 243, 252, 0.3)"],
+      [0.03, "rgba(103, 232, 249, 0.15)"],
       [0.2, "#67e8f9"],
-      [0.45, "#0ea5e9"],
-      [0.7, "#2563eb"],
-      [1, "#1e3a8a"],
+      [0.45, "#22d3ee"],
+      [0.7, "#3b82f6"],
+      [1, "#6366f1"],
     ],
     legend: ["0 in/hr", "1.0+ in/hr"],
   },
@@ -87,11 +91,11 @@ export const HEATMAP_METRICS: readonly HeatmapMetricConfig[] = [
     max: 3,
     floor: 0.04,
     ramp: [
-      [0.03, "rgba(221, 214, 254, 0.3)"],
+      [0.03, "rgba(196, 181, 253, 0.18)"],
       [0.2, "#c4b5fd"],
-      [0.45, "#8b5cf6"],
-      [0.7, "#6d28d9"],
-      [1, "#4c1d95"],
+      [0.45, "#a78bfa"],
+      [0.7, "#8b5cf6"],
+      [1, "#d946ef"],
     ],
     legend: ["0 in/hr", "3.0+ in/hr"],
   },

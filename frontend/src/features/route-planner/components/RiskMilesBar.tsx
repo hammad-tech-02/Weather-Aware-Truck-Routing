@@ -22,7 +22,7 @@ export function RiskMilesBar({ milesByLevel, totalMiles }: RiskMilesBarProps) {
 
   return (
     <div
-      className="flex h-2 w-full overflow-hidden rounded-full bg-slate-100"
+      className="flex h-2 w-full gap-px overflow-hidden rounded-full bg-sunken"
       role="img"
       aria-label={`Miles by risk level: ${description}`}
       title={description}

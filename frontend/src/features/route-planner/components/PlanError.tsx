@@ -16,13 +16,13 @@ function detailLines(details: unknown): string[] {
 export function PlanError({ error }: { error: unknown }) {
   const lines = error instanceof ApiError ? detailLines(error.details) : [];
   return (
-    <div role="alert" className="flex gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+    <div role="alert" className="flex gap-2.5 rounded-xl bg-danger-soft p-3 text-sm text-danger ring-1 ring-danger-line">
       <AlertCircle className="mt-0.5 size-4 shrink-0" />
       <div className="min-w-0">
-        <p className="font-medium">Could not plan this trip</p>
-        <p className="mt-0.5 text-xs text-red-700">{getErrorMessage(error)}</p>
+        <p className="font-semibold">Could not plan this trip</p>
+        <p className="mt-0.5 text-xs opacity-90">{getErrorMessage(error)}</p>
         {lines.length > 0 && (
-          <ul className="mt-1 list-disc pl-4 text-xs text-red-700">
+          <ul className="mt-1 list-disc pl-4 text-xs opacity-90">
             {lines.map((line) => (
               <li key={line}>{line}</li>
             ))}
