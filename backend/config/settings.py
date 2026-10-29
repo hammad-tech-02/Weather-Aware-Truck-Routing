@@ -13,6 +13,10 @@ DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() == "true"
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 
+# Railway injects its public domain and health-checks from its own host
+if railway_domain := os.getenv("RAILWAY_PUBLIC_DOMAIN"):
+    ALLOWED_HOSTS += [railway_domain, "healthcheck.railway.app"]
+
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.staticfiles",
