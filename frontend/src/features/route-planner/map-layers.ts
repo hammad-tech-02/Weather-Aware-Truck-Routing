@@ -32,6 +32,8 @@ export const LAYERS = {
   hillshade: "hillshade",
   heatmap: "heatmap",
   routesAlt: "routes-alt",
+  routeHover: "route-hover",
+  routesHit: "routes-hit",
   routeSelectedCasing: "route-selected-casing",
   routeSelectedBase: "route-selected-base",
   routeRisk: "route-risk",
@@ -56,6 +58,11 @@ export function selectedRouteFilter(routeId: string | undefined): FilterSpecific
 
 export function alternativeRoutesFilter(routeId: string | undefined): FilterSpecification {
   return ["!=", ["get", "id"], routeId ?? ""];
+}
+
+/** Matches nothing until a route is hovered. */
+export function hoveredRouteFilter(routeId: string | undefined): FilterSpecification {
+  return ["==", ["get", "id"], routeId ?? ""];
 }
 
 export function activeCheckpointFilter(index: number | undefined): FilterSpecification {
@@ -142,6 +149,31 @@ export function addOverlays(map: MaplibreMap, appearance: Appearance): void {
         "line-width": zoomScaled(3, 6),
         "line-opacity": palette.routeAltOpacity,
       },
+    },
+    anchor,
+  );
+
+  map.addLayer(
+    {
+      id: LAYERS.routeHover,
+      type: "line",
+      source: SOURCES.routes,
+      filter: hoveredRouteFilter(undefined),
+      layout: { "line-join": "round", "line-cap": "round" },
+      paint: { "line-color": palette.routeAlt, "line-width": zoomScaled(5, 9), "line-opacity": 0.9 },
+    },
+    anchor,
+  );
+
+  // invisible wide line so the thin alternative routes are easy to click
+  map.addLayer(
+    {
+      id: LAYERS.routesHit,
+      type: "line",
+      source: SOURCES.routes,
+      filter: alternativeRoutesFilter(undefined),
+      layout: { "line-join": "round", "line-cap": "round" },
+      paint: { "line-color": "#000000", "line-width": 24, "line-opacity": 0 },
     },
     anchor,
   );

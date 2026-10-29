@@ -56,7 +56,8 @@ export function PlaceAutocomplete({ label, placeholder, value, onChange, error, 
       const delta = event.key === "ArrowDown" ? 1 : -1;
       setActiveIndex((i) => (i + delta + results.length) % results.length);
     } else if (event.key === "Enter") {
-      const place = results[activeIndex] ?? (results.length === 1 ? results[0] : undefined);
+      // enter with nothing highlighted takes the top suggestion
+      const place = results[activeIndex] ?? results[0];
       if (showList && place) {
         event.preventDefault();
         select(place);

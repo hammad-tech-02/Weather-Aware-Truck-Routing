@@ -30,6 +30,7 @@ import {
   activeCheckpointFilter,
   addOverlays,
   alternativeRoutesFilter,
+  hoveredRouteFilter,
   selectedRouteFilter,
   setSourceData,
 } from "./map-layers";
@@ -292,6 +293,8 @@ export class PlannerMap {
   private applySelection(): void {
     const id = this.state.selectedRouteId;
     this.map.setFilter(LAYERS.routesAlt, alternativeRoutesFilter(id));
+    this.map.setFilter(LAYERS.routesHit, alternativeRoutesFilter(id));
+    this.map.setFilter(LAYERS.routeHover, hoveredRouteFilter(undefined));
     this.map.setFilter(LAYERS.routeSelectedCasing, selectedRouteFilter(id));
     this.map.setFilter(LAYERS.routeSelectedBase, selectedRouteFilter(id));
   }
@@ -333,9 +336,17 @@ export class PlannerMap {
     const map = this.map;
     const firstFeature = (event: MapLayerMouseEvent): MapGeoJSONFeature | undefined => event.features?.[0];
 
-    map.on("click", LAYERS.routesAlt, (event) => {
+    map.on("click", LAYERS.routesHit, (event) => {
+      // checkpoints and stops sit on top and have their own click handlers
+      if (map.queryRenderedFeatures(event.point, { layers: [LAYERS.checkpoints, LAYERS.stops] }).length) return;
       const id = firstFeature(event)?.properties.id;
       if (typeof id === "string") this.handlers?.onSelectRoute(id);
+    });
+    map.on("mousemove", LAYERS.routesHit, (event) => {
+      map.setFilter(LAYERS.routeHover, hoveredRouteFilter(firstFeature(event)?.properties.id));
+    });
+    map.on("mouseleave", LAYERS.routesHit, () => {
+      map.setFilter(LAYERS.routeHover, hoveredRouteFilter(undefined));
     });
     map.on("click", LAYERS.checkpoints, (event) => {
       const index = firstFeature(event)?.properties.index;
@@ -346,7 +357,7 @@ export class PlannerMap {
       if (typeof index === "number") this.handlers?.onStopClick(index);
     });
 
-    for (const layer of [LAYERS.routesAlt, LAYERS.checkpoints, LAYERS.stops]) {
+    for (const layer of [LAYERS.routesHit, LAYERS.checkpoints, LAYERS.stops]) {
       map.on("mouseenter", layer, () => {
         map.getCanvas().style.cursor = "pointer";
       });
