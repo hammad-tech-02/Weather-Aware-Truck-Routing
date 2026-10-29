@@ -1,0 +1,16 @@
+# python
+__pycache__/
+.venv/
+.pytest_cache/
+.ruff_cache/
+backend/staticfiles/
+backend/frontend_dist/
+
+# node
+node_modules/
+frontend/dist/
+
+# env / os
+.env
+.env.local
+.DS_Store
