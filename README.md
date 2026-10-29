@@ -2,7 +2,7 @@
 
 Plan a truck trip, get three route options, and see which one is safest given the forecast at the time the truck will actually be at each point along the way, the load weight, and travel time.
 
-Live: `<hosted-url>` · Walkthrough: `<loom-url>`
+Live: https://o7n3zvstyh6zxgzfimw7izydzi0fkvqv.lambda-url.us-east-1.on.aws/ · Walkthrough: `<loom-url>`
 
 ## What it does
 
@@ -37,13 +37,15 @@ docker run -p 8000:8000 -e DJANGO_ALLOWED_HOSTS=localhost truck-weather-routing
 
 No API keys are needed. All providers are free and keyless (see below).
 
-## Deploy (Railway)
+## Deploy
 
-1. New Project → Deploy from GitHub repo → pick this repo. `railway.json` tells Railway to build the Dockerfile and health-check `/api/health`.
-2. Variables: `DJANGO_SECRET_KEY` (any long random string). `DJANGO_DEBUG` already defaults to `false` in the image, and the Railway domain is allowed automatically.
-3. Settings → Networking → Generate Domain.
+**AWS Lambda (current host).** One function serves the API and the built React app through a public Function URL. `backend/config/lambda_handler.py` adapts Lambda events to Django's WSGI app.
 
-The service runs one gunicorn worker with 8 threads (about 100 MB RAM) and sleeps when idle, so it fits the free plan's credit. Raise `WEB_CONCURRENCY` for more throughput.
+```bash
+AWS_PROFILE=<profile> ./deploy/aws-lambda.sh   # first run creates role, function and URL; later runs update the code
+```
+
+**Railway / any Docker host.** `railway.json` builds the Dockerfile and health-checks `/api/health`. Set `DJANGO_SECRET_KEY`; the Railway domain is allowed automatically. The container runs one gunicorn worker with 8 threads (about 100 MB RAM); raise `WEB_CONCURRENCY` for more throughput.
 
 ## Layout
 
@@ -73,6 +75,7 @@ frontend/
       types.ts             API types (mirrors docs/api.md)
 docs/api.md                API contract
 Dockerfile                 multi-stage: builds React, runs Django on gunicorn
+deploy/aws-lambda.sh       one-command Lambda deploy (Function URL)
 railway.json               Railway build + deploy config
 ```
 
